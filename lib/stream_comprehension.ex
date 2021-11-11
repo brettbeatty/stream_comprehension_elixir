@@ -39,8 +39,24 @@ defmodule StreamComprehension do
   end
 
   @spec starts_with_generator?([Macro.t()]) :: boolean()
-  defp starts_with_generator?(args) do
-    match?([{:<-, _meta, [_match, _enumerable]} | _args], args)
+  defp starts_with_generator?(args)
+
+  defp starts_with_generator?([{:<<>>, _meta, parts} | _args]) do
+    case bitstring_generator(parts) do
+      {_match, _bitstring} ->
+        true
+
+      :error ->
+        false
+    end
+  end
+
+  defp starts_with_generator?([{:<-, _meta, [_match, _enumerable]} | _args]) do
+    true
+  end
+
+  defp starts_with_generator?(_args) do
+    false
   end
 
   @spec build_stream([Macro.t()], Macro.Env.t()) :: Macro.t()
@@ -84,6 +100,31 @@ defmodule StreamComprehension do
     %{acc | ast: ast}
   end
 
+  defp apply_arg({:<<>>, _meta, parts}, acc) do
+    case bitstring_generator(parts) do
+      {match, bitstring} ->
+        ast =
+          quote do
+            Stream.resource(
+              fn -> unquote(bitstring) end,
+              fn
+                <<unquote_splicing(match), remaining::bitstring>> ->
+                  {unquote(acc.ast), remaining}
+
+                bitstring ->
+                  {:halt, bitstring}
+              end,
+              fn _bitstring -> [] end
+            )
+          end
+
+        %{acc | ast: ast}
+
+      :error ->
+        acc
+    end
+  end
+
   defp apply_arg(opts, acc) when is_list(opts) do
     Enum.reduce(opts, acc, &apply_opt/2)
   end
@@ -99,6 +140,18 @@ defmodule StreamComprehension do
       end
 
     %{acc | ast: ast}
+  end
+
+  @spec bitstring_generator([Macro.t()]) ::
+          {parts :: [Macro.t()], bitstring :: Macro.t()} | :error
+  defp bitstring_generator(parts) do
+    case Enum.reverse(parts) do
+      [{:<-, _meta, [part, bitstring]} | remaining] ->
+        {Enum.reverse([part | remaining]), bitstring}
+
+      _reversed ->
+        :error
+    end
   end
 
   @spec apply_opt({:uniq, boolean()} | term(), acc()) :: acc() | no_return()

@@ -42,6 +42,15 @@ defmodule StreamComprehensionTest do
       assert Enum.to_list(my_stream) == 'ac'
     end
 
+    test "success: supports bitstring generators" do
+      input = <<1, 2, 3, 4>>
+      assert input == <<1, 0::4, 32, 3::4, 4>>
+
+      my_stream = stream for <<a, b::4 <- input>>, do: {a, b}
+
+      assert Enum.to_list(my_stream) == [{1, 0}, {32, 3}]
+    end
+
     test "success: not :uniq by default" do
       my_stream = stream for x <- 'aabc', do: x + 1
 
@@ -55,7 +64,7 @@ defmodule StreamComprehensionTest do
     end
 
     test "success: supports multiple generators" do
-      my_stream = stream for x <- ?a..?c, x != ?b, y <- ?d..?f, do: <<x, y>>
+      my_stream = stream for x <- ?a..?c, x != ?b, <<y <- "def">>, do: <<x, y>>
 
       assert Enum.to_list(my_stream) == ["ad", "ae", "af", "cd", "ce", "cf"]
     end
@@ -159,6 +168,18 @@ defmodule StreamComprehensionTest do
       assert Enum.to_list(my_stream) == 'ac'
     end
 
+    test "success: supports bitstring generators" do
+      input = <<1, 2, 3, 4>>
+      assert input == <<1, 0::4, 32, 3::4, 4>>
+
+      my_stream =
+        stream for <<a, b::4 <- input>> do
+          {a, b}
+        end
+
+      assert Enum.to_list(my_stream) == [{1, 0}, {32, 3}]
+    end
+
     test "success: not :uniq by default" do
       my_stream =
         stream for x <- 'aabc' do
@@ -179,7 +200,7 @@ defmodule StreamComprehensionTest do
 
     test "success: supports multiple generators" do
       my_stream =
-        stream for x <- ?a..?c, x != ?b, y <- ?d..?f do
+        stream for x <- ?a..?c, x != ?b, <<y <- "def">> do
           <<x, y>>
         end
 
