@@ -1,5 +1,6 @@
 defmodule StreamComprehensionTest do
   use ExUnit.Case, async: true
+  doctest StreamComprehension
 
   defmacrop assert_compile_error(message, do: block) do
     quote bind_quoted: [message: message, block: Macro.escape(block)] do

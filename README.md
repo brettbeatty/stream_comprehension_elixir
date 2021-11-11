@@ -1,21 +1,43 @@
 # StreamComprehension
+StreamComprehension allows for comprehensions to build streams instead of lists.
 
-**TODO: Add description**
+Sometimes when working with streams I find myself longing for the versatility of list
+comprehensions. This project is an attempt to have the best of both worlds (for fun; no intent to
+use this in production).
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `stream_comprehension` to your list of dependencies in `mix.exs`:
+## Usage
+You should be able to use stream comprehensions the same as regular comprehensions (less the `:into`
+and `:reduce` options because that defeats the point), but the output will be a stream instead of a
+list.
 
 ```elixir
-def deps do
-  [
-    {:stream_comprehension, "~> 0.1.0"}
-  ]
-end
+import StreamComprehension
+
+input = Stream.cycle([ok: "twenty-three", error: "forty-two", ok: "nineteen"])
+
+my_stream =
+             # only use words from :ok tuples
+  stream for {:ok, word} <- input,
+             # for demonstration purposes only; always truthy
+             send(self(), {:word, word}),
+             # show off bitstring generator
+             <<character <- word>>,
+             # filter on character being in lowercase alphabet
+             character in ?a..?z do
+    character
+  end
+#=> #Function<59.58486609/2 in Stream.transform/3>
+
+flush()
+#=> :ok
+
+Enum.take(my_stream, 38)
+#=> 'twentythreenineteentwentythreenineteen'
+
+flush()
+# {:word, "twenty-three"}
+# {:word, "nineteen"}
+# {:word, "twenty-three"}
+# {:word, "nineteen"}
+#=> :ok
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/stream_comprehension](https://hexdocs.pm/stream_comprehension).
-

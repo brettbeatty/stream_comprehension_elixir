@@ -1,4 +1,10 @@
 defmodule StreamComprehension do
+  @moduledoc """
+  StreamComprehension allows for comprehensions to build streams instead of lists.
+
+  Stream comprehensions do not support the `:into` or `:reduce` options because the output would
+  then not be a stream, and regular comprehensions suffice.
+  """
   @typep reason() ::
            :invalid_opt
            | :invalid_opts
@@ -8,6 +14,31 @@ defmodule StreamComprehension do
            | {:usage, arity :: 1..2}
   @typep acc() :: %{ast: Macro.t(), env: Macro.Env.t(), uniq: boolean()}
 
+  @doc """
+  Build a stream from the given for comprehension instead of a list.
+
+  For more information about comprehensions, see `Kernel.SpecialForms.for/1`.
+
+  For more information about streams, see `Stream`.
+
+  Stream comprehensions do not support the `:into` or `:reduce` options because the output would
+  then not be a stream, and regular comprehensions would do the same thing. The `:uniq` option
+  is still supported.
+
+  ## Examples
+
+      iex> import StreamComprehension
+      iex> input = Stream.cycle([ok: "twenty-three", error: "forty-two", ok: "nineteen"])
+      iex> my_stream =
+      ...>   stream for {:ok, word} <- input,
+      ...>              <<character <- word>>,
+      ...>              character in ?a..?z do
+      ...>     character
+      ...>   end
+      iex> Enum.take(my_stream, 38)
+      'twentythreenineteentwentythreenineteen'
+
+  """
   defmacro stream(comprehension)
 
   defmacro stream({:for, _meta, args}) when is_list(args) do
@@ -24,6 +55,12 @@ defmodule StreamComprehension do
     raise compile_error({:usage, _arity = 1}, __CALLER__)
   end
 
+  @doc """
+  Same as `stream/1`.
+
+  Depending how your :do blocks and optional parentheses work out, the :do block can be passed to
+  `stream/2` instead of `for/1`, so `stream/2` exists to handle those cases.
+  """
   defmacro stream(comprehension, block)
 
   defmacro stream({:for, _meta, args}, opts) when is_list(args) and is_list(opts) do
